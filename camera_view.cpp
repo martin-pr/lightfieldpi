@@ -7,39 +7,58 @@
 
 #include <QPainter>
 
-CameraView::CameraView(QWidget* parent) : QWidget(parent) {
-    m_camera.setWidth(320);
-    m_camera.setHeight(240);
-    m_camera.setFormat(raspicam::RASPICAM_FORMAT_RGB);
+// /usr/local/include/raspicam/raspicamtypes.h
+// /usr/local/include/raspicam/raspicam.h
+// /usr/local/include/raspicam/raspicam_cv.h
+// /usr/local/include/raspicam/raspicam_still_cv.h
 
-    std::cout << "camera open" << std::endl;
+#define WIDTH 320
+#define HEIGHT 240
+
+namespace {
+    void updateCallback(void* data) {
+        CameraView* view = (CameraView*)data;
+        view->update();
+    }
+}
+
+CameraView::CameraView(QWidget* parent) : QWidget(parent) {
+    m_camera.setWidth(WIDTH);
+    m_camera.setHeight(HEIGHT);
+    m_camera.setFormat(raspicam::RASPICAM_FORMAT_BGR);
+
+    m_camera.setUserCallback(updateCallback, this);
 
     if(!m_camera.open())
         std::cerr << "Error opening camera" << std::endl;
 
-    std::cout << "sleep" << std::endl;
-
-    std::this_thread::sleep_for(std::chrono::seconds(3)); // TODO: replace with a timer!
-
-    m_data.resize(320*240*3);
-
-    std::cout << "camera grab" << std::endl;
-
-    m_camera.grab(); // blocking, TODO: change to a callback!
-
-    std::cout << "camera retrieve" << std::endl;
-
-    m_camera.retrieve(m_data.data(), raspicam::RASPICAM_FORMAT_RGB);
-
-    std::cout << "qimage" << std::endl;
-
-    m_image = QImage(m_data.data(), 320, 240, QImage::Format_RGB888);
-
-    std::cout << "all done!" << std::endl;
+    // initialise the image for view data update
+    m_data.resize(WIDTH*HEIGHT*3);
+    m_image = QImage(m_data.data(), WIDTH, HEIGHT, QImage::Format_RGB888);
 }
 
 void CameraView::paintEvent(QPaintEvent* e) {
-    QPainter painter(this);
+    // update the camera data
+    // TODO: different thread?
+    m_camera.grab();
+    m_camera.retrieve(m_data.data());
 
-    painter.drawImage(QRect(QPoint(0,0),size()), m_image);
+    // figure out the size
+    const float aspect = (float)width() / (float)height();
+    const float imgAspect = (float)WIDTH / (float)HEIGHT;
+
+    QPoint origin;
+    QSize size;
+    if(aspect > imgAspect) {
+        origin = QPoint((width() - width()/aspect*imgAspect) / 2, 0);
+        size = QSize(width() / aspect * imgAspect, height());
+    }
+    else {
+        origin = QPoint(0, (height() - height()*aspect/imgAspect) / 2);
+        size = QSize(width(), height() * aspect / imgAspect);
+    }
+
+    // paint the acquired image
+    QPainter painter(this);
+    painter.drawImage(QRect(origin, size), m_image);
 }

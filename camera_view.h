@@ -8,6 +8,8 @@ class CameraView : public QWidget {
     public:
         CameraView(QWidget* parent = nullptr);
 
+        raspicam::RaspiCam& camera();
+
     protected:
         virtual void paintEvent(QPaintEvent* e) override;
 

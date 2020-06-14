@@ -18,6 +18,5 @@ int main(int argc, char *argv[]) {
 
     app.exec();
 
-    std::cout << "Hello world!" << std::endl;
     return 0;
 }
