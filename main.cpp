@@ -4,6 +4,7 @@
 #include <QLabel>
 
 #include "main_window.h"
+#include "camera_view.h"
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -12,10 +13,8 @@ int main(int argc, char *argv[]) {
     //win.showFullScreen();
     win.showMaximized();
 
-    QLabel* label = new QLabel();
-    label->setText("Hello world!");
-    label->setAlignment(Qt::AlignCenter);
-    win.setCentralWidget(label);
+    CameraView* view = new CameraView();
+    win.setCentralWidget(view);
 
     app.exec();
 
