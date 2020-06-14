@@ -1,6 +1,7 @@
 #include "main_window.h"
 
 #include <sstream>
+#include <iostream>
 
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -12,9 +13,14 @@ namespace {
     }});
 }
 
-#define MAX_MULTIPLIER 8
-
 MainWindow::MainWindow() : QMainWindow() {
+    // setup camera
+    connect(&m_camera, &Camera::imageReady, [this]() {
+        auto img = m_camera.capture();
+        m_cameraView->showImage(img);
+    });
+
+    // setup the widgets
     QWidget* central = new QWidget();
     QHBoxLayout* layout = new QHBoxLayout(central);
     layout->setContentsMargins(0,0,0,0);
@@ -25,18 +31,20 @@ MainWindow::MainWindow() : QMainWindow() {
     QWidget* controls = new QWidget();
     QFormLayout* form = new QFormLayout(controls);
 
-    auto baseResolution = m_cameraView->baseResolution();
-
     QComboBox* resolution = new QComboBox();
-    for(auto mult: s_multipliers) {
-        std::stringstream ss;
-        ss << (baseResolution.first * (mult)) << " x " << (baseResolution.second * (mult));
+    {
+        auto baseResolution = Camera::baseResolution();
+        for(auto mult: s_multipliers) {
+            std::stringstream ss;
+            ss << (baseResolution.first * (mult)) << " x " << (baseResolution.second * (mult));
 
-        resolution->addItem(ss.str().c_str());
+            resolution->addItem(ss.str().c_str());
+        }
     }
 
     connect(resolution, (void (QComboBox::*)(int))(&QComboBox::currentIndexChanged), [this](int val) {
-        m_cameraView->setResolutionMultiplier(s_multipliers[val]);
+        assert(val >= 0 && val < s_multipliers.size());
+        m_camera.setResolutionMultiplier(s_multipliers[val]);
     });
 
     form->addRow("Resolution:", resolution);
@@ -45,3 +53,4 @@ MainWindow::MainWindow() : QMainWindow() {
 
     setCentralWidget(central);
 }
+

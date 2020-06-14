@@ -3,6 +3,7 @@
 #include <QMainWindow>
 
 #include "camera_view.h"
+#include "camera.h"
 
 class MainWindow : public QMainWindow {
     public:
@@ -10,4 +11,6 @@ class MainWindow : public QMainWindow {
 
     private:
         CameraView* m_cameraView;
+
+        Camera m_camera;
 };

@@ -14,6 +14,7 @@ add_executable (lightfieldpi
     src/main.cpp
     src/camera_view.cpp
     src/main_window.cpp
+    src/camera.cpp
 )
 
 target_link_libraries(lightfieldpi Qt5::Widgets ${raspicam_LIBS})
