@@ -10,6 +10,9 @@ class CameraView : public QWidget {
 
         raspicam::RaspiCam& camera();
 
+        void setResolutionMultiplier(int multiplier); // 1..8
+        static std::pair<int, int> baseResolution();
+
     protected:
         virtual void paintEvent(QPaintEvent* e) override;
 

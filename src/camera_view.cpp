@@ -23,18 +23,18 @@ namespace {
 }
 
 CameraView::CameraView(QWidget* parent) : QWidget(parent) {
-    m_camera.setWidth(WIDTH);
-    m_camera.setHeight(HEIGHT);
     m_camera.setFormat(raspicam::RASPICAM_FORMAT_BGR);
 
     m_camera.setUserCallback(updateCallback, this);
 
-    if(!m_camera.open())
-        std::cerr << "Error opening camera" << std::endl;
+    m_camera.setWidth(WIDTH);
+    m_camera.setHeight(HEIGHT);
 
-    // initialise the image for view data update
     m_data.resize(WIDTH*HEIGHT*3);
     m_image = QImage(m_data.data(), WIDTH, HEIGHT, QImage::Format_RGB888);
+
+    if(!m_camera.open())
+        std::cerr << "Error opening camera" << std::endl;
 }
 
 void CameraView::paintEvent(QPaintEvent* e) {
@@ -61,4 +61,22 @@ void CameraView::paintEvent(QPaintEvent* e) {
     // paint the acquired image
     QPainter painter(this);
     painter.drawImage(QRect(origin, size), m_image);
+}
+
+void CameraView::setResolutionMultiplier(int multiplier) {
+    m_camera.release();
+
+    m_camera.setWidth(WIDTH*multiplier);
+    m_camera.setHeight(HEIGHT*multiplier);
+
+    m_data.resize(WIDTH*HEIGHT*3*multiplier*multiplier);
+
+    if(!m_camera.open())
+        std::cerr << "Error opening camera" << std::endl;
+
+    m_image = QImage(m_data.data(), WIDTH*multiplier, HEIGHT*multiplier, QImage::Format_RGB888);
+}
+
+std::pair<int, int> CameraView::baseResolution() {
+    return std::make_pair(WIDTH, HEIGHT);
 }
