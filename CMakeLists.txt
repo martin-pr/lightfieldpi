@@ -10,6 +10,10 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(raspicam REQUIRED)
 
-add_executable (lightfieldpi main.cpp camera_view.cpp main_window.cpp)
+add_executable (lightfieldpi
+    src/main.cpp
+    src/camera_view.cpp
+    src/main_window.cpp
+)
 
 target_link_libraries(lightfieldpi Qt5::Widgets ${raspicam_LIBS})
