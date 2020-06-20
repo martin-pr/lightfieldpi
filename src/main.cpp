@@ -3,9 +3,13 @@
 #include <QApplication>
 #include <QLabel>
 
+#include <wiringPi.h>
+
 #include "main_window.h"
 
 int main(int argc, char *argv[]) {
+    wiringPiSetupPhys();
+
     QApplication app(argc, argv);
 
     MainWindow win;

@@ -15,6 +15,7 @@ add_executable (lightfieldpi
     src/camera_view.cpp
     src/main_window.cpp
     src/camera.cpp
+    src/motor.cpp
 )
 
-target_link_libraries(lightfieldpi Qt5::Widgets ${raspicam_LIBS})
+target_link_libraries(lightfieldpi Qt5::Widgets ${raspicam_LIBS} wiringPi)
