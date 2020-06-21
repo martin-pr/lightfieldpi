@@ -12,6 +12,8 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QThreadPool>
+#include <QProgressDialog>
+#include <QCoreApplication>
 
 #include "config.h"
 #include <wiringPi.h>
@@ -35,7 +37,7 @@ namespace {
 
     class ImageSaver : public QRunnable {
         public:
-            ImageSaver(QImage img, const std::string& filename, int index) : m_img(img), m_filename(filename), m_index(index) {
+            ImageSaver(QImage img, const std::string& filename, int index, int& counter) : m_img(img), m_filename(filename), m_index(index), m_counter(counter) {
                 setAutoDelete(true);
             }
 
@@ -44,12 +46,16 @@ namespace {
                 f << m_filename << std::setfill('0') << std::setw(3) << m_index << ".png";
 
                 m_img.save(f.str().c_str());
+
+                --m_counter;
             }
 
         private:
             QImage m_img;
             std::string m_filename;
             int m_index;
+
+            int& m_counter;
     };
 }
 
@@ -159,14 +165,20 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
 
             int current = 0;
             int index = 0;
+
+            int imageProgressCounter = 0;
+
             while(current < end) {
+                delay(1000); // allow the camera to stabilise
+
                 auto img = m_camera.capture();
                 m_cameraView->showImage(img);
                 repaint();
 
                 {
                     int i = index++;
-                    tasks.push_back(new ImageSaver(img.copy(), filename_base, i));
+                    tasks.push_back(new ImageSaver(img.copy(), filename_base, i, imageProgressCounter));
+                    ++imageProgressCounter;
                 }
 
                 current += step;
@@ -180,7 +192,20 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
             for(auto& i : tasks)
                 threadpool.start(i);
 
-            threadpool.waitForDone();
+            {
+                QProgressDialog progress("Saving...", "Cancel", 0, tasks.size());
+                progress.show();
+
+                while(imageProgressCounter > 0) {
+                    progress.setValue(progress.maximum() - imageProgressCounter);
+
+                    QCoreApplication::processEvents();
+
+                    delay(500);
+                }
+
+                threadpool.waitForDone();
+            }
         }
 
         m_continuous = true;
