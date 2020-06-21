@@ -11,6 +11,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QPushButton>
+#include <QThreadPool>
 
 #include "config.h"
 #include <wiringPi.h>
@@ -31,6 +32,25 @@ namespace {
         QPushButton::connect(button, &QPushButton::pressed, callback);
         return button;
     }
+
+    class ImageSaver : public QRunnable {
+        public:
+            ImageSaver(QImage img, const std::string& filename, int index) : m_img(img), m_filename(filename), m_index(index) {
+                setAutoDelete(true);
+            }
+
+            virtual void run() override {
+                std::stringstream f;
+                f << m_filename << std::setfill('0') << std::setw(3) << m_index << ".png";
+
+                m_img.save(f.str().c_str());
+            }
+
+        private:
+            QImage m_img;
+            std::string m_filename;
+            int m_index;
+    };
 }
 
 MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M1_ENDSTOP, M1_DIR_INVERT), m_motor2(M2_ENABLE, M2_STEP, M2_DIR, M2_ENDSTOP, M2_DIR_INVERT), m_continuous(true) {
@@ -108,6 +128,18 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
 
     QPushButton* go = new QPushButton("Go!");
     QPushButton::connect(go, &QPushButton::pressed, [this, steps]() {
+        time_t rawtime = time(0);
+        struct tm * now;
+        now = gmtime (&rawtime);
+
+        std::string filename_base;
+        {
+            std::stringstream ss;
+            ss << now->tm_year << "_" << std::setfill('0') << std::setw(2) << (now->tm_mon)+1 << "_" << std::setfill('0') << std::setw(2) << now->tm_mday << "_" << std::setfill('0') << std::setw(2) << now->tm_hour << "_" << std::setfill('0') << std::setw(2) << now->tm_min << "_" << std::setfill('0') << std::setw(2) << now->tm_sec << "_";
+
+            filename_base = ss.str();
+        }
+
         const Camera::State original = m_camera.state();
 
         const Camera::State manual = m_camera.manualState();
@@ -121,13 +153,32 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
 
         m_continuous = false;
 
-        saveImage();
-        int current = 0;
-        while(current < M1_RAIL_LENGTH) {
-            current += step;
-            m_motor1.move(step);
+        {
+            QThreadPool threadpool;
+            threadpool.setExpiryTimeout(-1);
+            threadpool.setMaxThreadCount(std::max(1, QThread::idealThreadCount())); // at least 1 thread, but try to keep one free for the main loop
 
-            saveImage();
+            int current = 0;
+            int index = 0;
+            while(current <= M1_RAIL_LENGTH) {
+                auto img = m_camera.capture();
+                m_cameraView->showImage(img);
+                repaint();
+
+                {
+                    int i = index++;
+
+                    QImage copy = img.copy();
+                    threadpool.start(new ImageSaver(copy, filename_base, i));
+
+                    delay(1000);
+                }
+
+                current += step;
+                m_motor1.move(step);
+            }
+
+            threadpool.waitForDone();
         }
 
         m_continuous = true;
@@ -142,21 +193,4 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
     layout->addWidget(controls, 1);
 
     setCentralWidget(central);
-}
-
-void MainWindow::saveImage() {
-    delay(1000);
-
-    auto img = m_camera.capture();
-    m_cameraView->showImage(img);
-    repaint();
-
-    time_t rawtime = time(0);
-    struct tm * now;
-    now = gmtime (&rawtime);
-
-    std::stringstream filename;
-    filename << now->tm_year << "_" << std::setfill('0') << std::setw(2) << (now->tm_mon)+1 << "_" << std::setfill('0') << std::setw(2) << now->tm_mday << "_" << std::setfill('0') << std::setw(2) << now->tm_hour << "_" << std::setfill('0') << std::setw(2) << now->tm_min << "_" << std::setfill('0') << std::setw(2) << now->tm_sec << ".png";
-
-    img.save(filename.str().c_str());
 }
