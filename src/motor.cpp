@@ -5,7 +5,7 @@
 
 #include <wiringPi.h>
 
-Motor::Motor(int enable_pin, int step_pin, int dir_pin) : m_enablePin(enable_pin), m_stepPin(step_pin), m_dirPin(dir_pin), m_invert(false) {
+Motor::Motor(int enable_pin, int step_pin, int dir_pin, bool dir_invert) : m_enablePin(enable_pin), m_stepPin(step_pin), m_dirPin(dir_pin), m_invert(dir_invert) {
     pinMode(m_enablePin, OUTPUT);
     pinMode(m_stepPin, OUTPUT);
     pinMode(m_dirPin, OUTPUT);
@@ -32,6 +32,3 @@ void Motor::move(int steps) {
     digitalWrite(m_enablePin, HIGH);
 }
 
-void Motor::setMoveInvert(bool invert) {
-    m_invert = invert;
-}

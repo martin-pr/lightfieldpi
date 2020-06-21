@@ -8,7 +8,6 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QPushButton>
-#include <QCheckBox>
 
 #include "config.h"
 
@@ -26,7 +25,7 @@ namespace {
     }
 }
 
-MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR), m_motor2(M2_ENABLE, M2_STEP, M2_DIR) {
+MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M1_DIR_INVERT), m_motor2(M2_ENABLE, M2_STEP, M2_DIR, M2_DIR_INVERT) {
     // setup camera
     connect(&m_camera, &Camera::imageReady, [this]() {
         auto img = m_camera.capture();
@@ -70,10 +69,6 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR), 
     m1_moves->addWidget(makeButton("10", [this]() { m_motor1.move(100); }));
     m1_moves->addWidget(makeButton("50", [this]() { m_motor1.move(500); }));
 
-    QCheckBox* m1_inv = new QCheckBox("invert");
-    QCheckBox::connect(m1_inv, &QCheckBox::stateChanged, [this](int state) { m_motor1.setMoveInvert(state == Qt::Checked); });
-    m1_moves->addWidget(m1_inv);
-
     form->addWidget(new QLabel("Motor 1 moves:"));
     form->addLayout(m1_moves);
 
@@ -82,10 +77,6 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR), 
     m2_moves->addWidget(makeButton("-10", [this]() { m_motor2.move(-100); }));
     m2_moves->addWidget(makeButton("10", [this]() { m_motor2.move(100); }));
     m2_moves->addWidget(makeButton("50", [this]() { m_motor2.move(500); }));
-
-    QCheckBox* m2_inv = new QCheckBox("invert");
-    QCheckBox::connect(m2_inv, &QCheckBox::stateChanged, [this](int state) { m_motor2.setMoveInvert(state == Qt::Checked); });
-    m2_moves->addWidget(m2_inv);
 
     form->addWidget(new QLabel("Motor 2 moves:"));
     form->addLayout(m2_moves);
