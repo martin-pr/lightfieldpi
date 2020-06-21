@@ -16,16 +16,16 @@ namespace {
         1, 2, 4, 8
     }});
 
-    QPushButton* makeButton(QString label, std::function<void()> callback) {
+    QPushButton* makeButton(QString label, std::function<void()> callback, int xsize = 40) {
         QPushButton* button = new QPushButton(label);
-        button->setMinimumSize(QSize(0,0));
-        button->setMaximumSize(QSize(30,30));
+        button->setMinimumSize(QSize(0, 0));
+        button->setMaximumSize(QSize(xsize, 30));
         QPushButton::connect(button, &QPushButton::pressed, callback);
         return button;
     }
 }
 
-MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M1_DIR_INVERT), m_motor2(M2_ENABLE, M2_STEP, M2_DIR, M2_DIR_INVERT) {
+MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M1_ENDSTOP, M1_DIR_INVERT), m_motor2(M2_ENABLE, M2_STEP, M2_DIR, M2_ENDSTOP, M2_DIR_INVERT) {
     // setup camera
     connect(&m_camera, &Camera::imageReady, [this]() {
         auto img = m_camera.capture();
@@ -64,19 +64,21 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
 
     // motor moves
     QHBoxLayout* m1_moves = new QHBoxLayout();
-    m1_moves->addWidget(makeButton("-50", [this]() { m_motor1.move(-500); }));
-    m1_moves->addWidget(makeButton("-10", [this]() { m_motor1.move(-100); }));
-    m1_moves->addWidget(makeButton("10", [this]() { m_motor1.move(100); }));
-    m1_moves->addWidget(makeButton("50", [this]() { m_motor1.move(500); }));
+    m1_moves->addWidget(makeButton("Home", [this]() { m_motor1.home(); }, 60));
+    m1_moves->addWidget(makeButton("-500", [this]() { m_motor1.move(-500); }));
+    m1_moves->addWidget(makeButton("-100", [this]() { m_motor1.move(-100); }));
+    m1_moves->addWidget(makeButton("+100", [this]() { m_motor1.move(100); }));
+    m1_moves->addWidget(makeButton("+500", [this]() { m_motor1.move(500); }));
 
     form->addWidget(new QLabel("Motor 1 moves:"));
     form->addLayout(m1_moves);
 
     QHBoxLayout* m2_moves = new QHBoxLayout();
-    m2_moves->addWidget(makeButton("-50", [this]() { m_motor2.move(-500); }));
-    m2_moves->addWidget(makeButton("-10", [this]() { m_motor2.move(-100); }));
-    m2_moves->addWidget(makeButton("10", [this]() { m_motor2.move(100); }));
-    m2_moves->addWidget(makeButton("50", [this]() { m_motor2.move(500); }));
+    m2_moves->addWidget(makeButton("Home", [this]() { m_motor2.home(); }, 60));
+    m2_moves->addWidget(makeButton("-500", [this]() { m_motor2.move(-500); }));
+    m2_moves->addWidget(makeButton("-100", [this]() { m_motor2.move(-100); }));
+    m2_moves->addWidget(makeButton("+100", [this]() { m_motor2.move(100); }));
+    m2_moves->addWidget(makeButton("+500", [this]() { m_motor2.move(500); }));
 
     form->addWidget(new QLabel("Motor 2 moves:"));
     form->addLayout(m2_moves);
