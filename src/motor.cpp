@@ -2,8 +2,12 @@
 
 #include <thread>
 #include <unistd.h>
+#include <cmath>
+#include <iostream>
 
 #include <wiringPi.h>
+
+#include "config.h"
 
 Motor::Motor(int enable_pin, int step_pin, int dir_pin, int endstop, bool dir_invert) : m_enablePin(enable_pin), m_stepPin(step_pin), m_dirPin(dir_pin), m_endstopPin(endstop), m_invert(dir_invert), m_position(1000) {
     pinMode(m_enablePin, OUTPUT);
@@ -25,6 +29,7 @@ void Motor::move(int steps) {
 
     digitalWrite(m_enablePin, LOW);
 
+    float delay = MAX_MOTOR_DELAY;
     for(int a=0;a<abs(steps); ++a) {
         // break on endstop
         if(digitalRead(m_endstopPin) == LOW)
@@ -34,9 +39,14 @@ void Motor::move(int steps) {
             break;
 
         digitalWrite(m_stepPin, LOW);
-        usleep(200);
+        usleep(delay);
         digitalWrite(m_stepPin, HIGH);
-        usleep(200);
+        usleep(delay);
+
+        // acceleration handling
+        const float param = std::min(1.0f, std::min(((float)a / MOTOR_ACCEL_STEPS), ((float)(abs(steps) - a) / MOTOR_ACCEL_STEPS))); // between 0..1
+        // smooth handling
+        delay = (1.0f+cos(param * M_PI)) / 2.0f * (MAX_MOTOR_DELAY - MIN_MOTOR_DELAY) + MIN_MOTOR_DELAY;
 
         // update position
         m_position += steps > 0 ? 1 : -1;

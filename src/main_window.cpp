@@ -145,11 +145,12 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
         const Camera::State manual = m_camera.manualState();
         m_camera.setState(manual);
 
-        delay(10000); // 10s delay for the camera to adjust!
+        // delay(10000); // 10s delay for the camera to adjust!
 
         m_motor1.home();
 
         const int step = M1_RAIL_LENGTH / ((s_steps[steps->currentIndex()]-1));
+        const int end = step * ((s_steps[steps->currentIndex()]-1));
 
         m_continuous = false;
 
@@ -158,7 +159,7 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
 
             int current = 0;
             int index = 0;
-            while(current <= M1_RAIL_LENGTH) {
+            while(current < end) {
                 auto img = m_camera.capture();
                 m_cameraView->showImage(img);
                 repaint();

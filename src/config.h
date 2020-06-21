@@ -13,3 +13,7 @@
 #define M2_DIR_INVERT true
 
 #define M2_RAIL_LENGTH 15000
+
+#define MIN_MOTOR_DELAY 100.0f
+#define MAX_MOTOR_DELAY 1000.0f
+#define MOTOR_ACCEL_STEPS 200.0f
