@@ -22,7 +22,7 @@ namespace {
     }});
 
     static const std::vector<int> s_steps({{
-        3, 20, 50, 500
+        3, 20, 50, 200
     }});
 
     QPushButton* makeButton(QString label, std::function<void()> callback, int xsize = 40) {
@@ -154,9 +154,7 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
         m_continuous = false;
 
         {
-            QThreadPool threadpool;
-            threadpool.setExpiryTimeout(-1);
-            threadpool.setMaxThreadCount(std::max(1, QThread::idealThreadCount())); // at least 1 thread, but try to keep one free for the main loop
+            std::vector<QRunnable*> tasks;
 
             int current = 0;
             int index = 0;
@@ -167,16 +165,19 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
 
                 {
                     int i = index++;
-
-                    QImage copy = img.copy();
-                    threadpool.start(new ImageSaver(copy, filename_base, i));
-
-                    delay(1000);
+                    tasks.push_back(new ImageSaver(img.copy(), filename_base, i));
                 }
 
                 current += step;
                 m_motor1.move(step);
             }
+
+            QThreadPool threadpool;
+            threadpool.setExpiryTimeout(-1);
+            // threadpool.setMaxThreadCount(std::max(1, QThread::idealThreadCount())); // at least 1 thread, but try to keep one free for the main loop
+
+            for(auto& i : tasks)
+                threadpool.start(i);
 
             threadpool.waitForDone();
         }
