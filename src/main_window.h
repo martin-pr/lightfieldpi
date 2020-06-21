@@ -17,4 +17,8 @@ class MainWindow : public QMainWindow {
         Camera m_camera;
 
         Motor m_motor1, m_motor2;
+
+        bool m_continuous;
+
+        void saveImage();
 };

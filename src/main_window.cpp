@@ -2,6 +2,9 @@
 
 #include <sstream>
 #include <iostream>
+#include <unistd.h>
+#include <thread>
+#include <iomanip>
 
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -10,10 +13,15 @@
 #include <QPushButton>
 
 #include "config.h"
+#include <wiringPi.h>
 
 namespace {
     static const std::vector<int> s_multipliers({{
         1, 2, 4, 8
+    }});
+
+    static const std::vector<int> s_steps({{
+        3, 20, 50, 500
     }});
 
     QPushButton* makeButton(QString label, std::function<void()> callback, int xsize = 40) {
@@ -25,11 +33,13 @@ namespace {
     }
 }
 
-MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M1_ENDSTOP, M1_DIR_INVERT), m_motor2(M2_ENABLE, M2_STEP, M2_DIR, M2_ENDSTOP, M2_DIR_INVERT) {
+MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M1_ENDSTOP, M1_DIR_INVERT), m_motor2(M2_ENABLE, M2_STEP, M2_DIR, M2_ENDSTOP, M2_DIR_INVERT), m_continuous(true) {
     // setup camera
     connect(&m_camera, &Camera::imageReady, [this]() {
-        auto img = m_camera.capture();
-        m_cameraView->showImage(img);
+        if(m_continuous) {
+            auto img = m_camera.capture();
+            m_cameraView->showImage(img);
+        }
     });
 
     // setup the widgets
@@ -83,6 +93,49 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
     form->addWidget(new QLabel("Motor 2 moves:"));
     form->addLayout(m2_moves);
 
+    // capture UI
+    form->addWidget(new QLabel("Capture steps:"));
+    QComboBox* steps = new QComboBox();
+    {
+        for(auto s: s_steps) {
+            std::stringstream ss;
+            ss << s;
+
+            steps->addItem(ss.str().c_str());
+        }
+    }
+    form->addWidget(steps);
+
+    QPushButton* go = new QPushButton("Go!");
+    QPushButton::connect(go, &QPushButton::pressed, [this, steps]() {
+        const Camera::State original = m_camera.state();
+
+        const Camera::State manual = m_camera.manualState();
+        m_camera.setState(manual);
+
+        delay(10000); // 10s delay for the camera to adjust!
+
+        m_motor1.home();
+
+        const int step = M1_RAIL_LENGTH / ((s_steps[steps->currentIndex()]-1));
+
+        m_continuous = false;
+
+        saveImage();
+        int current = 0;
+        while(current < M1_RAIL_LENGTH) {
+            current += step;
+            m_motor1.move(step);
+
+            saveImage();
+        }
+
+        m_continuous = true;
+
+        m_camera.setState(original);
+    });
+    form->addWidget(go);
+
     // filler
     form->addWidget(new QWidget(), 1);
 
@@ -91,3 +144,19 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
     setCentralWidget(central);
 }
 
+void MainWindow::saveImage() {
+    delay(1000);
+
+    auto img = m_camera.capture();
+    m_cameraView->showImage(img);
+    repaint();
+
+    time_t rawtime = time(0);
+    struct tm * now;
+    now = gmtime (&rawtime);
+
+    std::stringstream filename;
+    filename << now->tm_year << "_" << std::setfill('0') << std::setw(2) << (now->tm_mon)+1 << "_" << std::setfill('0') << std::setw(2) << now->tm_mday << "_" << std::setfill('0') << std::setw(2) << now->tm_hour << "_" << std::setfill('0') << std::setw(2) << now->tm_min << "_" << std::setfill('0') << std::setw(2) << now->tm_sec << ".png";
+
+    img.save(filename.str().c_str());
+}
