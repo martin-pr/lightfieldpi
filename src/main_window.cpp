@@ -135,7 +135,7 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
 
     form->addWidget(new QLabel("Delay before frame capture (ms):"));
     QComboBox* delayComboBox = new QComboBox();
-    for(int d=0;d<10;++d) {
+    for(int d=0;d<=10;++d) {
         std::stringstream ss;
         ss << (d*100);
 
@@ -171,8 +171,6 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
 
         // delay(10000); // 10s delay for the camera to adjust!
 
-        m_motor1.home();
-
         const int step = M1_RAIL_LENGTH / ((s_steps[steps->currentIndex()]-1));
         const int end = step * ((s_steps[steps->currentIndex()]-1));
 
@@ -185,6 +183,12 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
             int index = 0;
 
             int imageProgressCounter = 0;
+
+            ///////
+            // CAPTURE START
+            //////
+            m_motor1.hold(true);
+            m_motor1.home();
 
             while(current < end) {
                 delay(m_delay); // allow the camera to stabilise
@@ -202,6 +206,12 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
                 current += step;
                 m_motor1.move(step);
             }
+
+            m_motor1.hold(false);
+
+            ///////
+            // CAPTURE END
+            //////
 
             QThreadPool threadpool;
             threadpool.setExpiryTimeout(-1);

@@ -9,7 +9,7 @@
 
 #include "config.h"
 
-Motor::Motor(int enable_pin, int step_pin, int dir_pin, int endstop, bool dir_invert) : m_enablePin(enable_pin), m_stepPin(step_pin), m_dirPin(dir_pin), m_endstopPin(endstop), m_invert(dir_invert), m_position(1000) {
+Motor::Motor(int enable_pin, int step_pin, int dir_pin, int endstop, bool dir_invert) : m_enablePin(enable_pin), m_stepPin(step_pin), m_dirPin(dir_pin), m_endstopPin(endstop), m_invert(dir_invert), m_position(1000), m_hold(false) {
     pinMode(m_enablePin, OUTPUT);
     pinMode(m_stepPin, OUTPUT);
     pinMode(m_dirPin, OUTPUT);
@@ -55,7 +55,8 @@ void Motor::move(int steps) {
             break;
     }
 
-    digitalWrite(m_enablePin, HIGH);
+    // digitalWrite(m_enablePin, HIGH);
+    hold(m_hold);
 }
 
 void Motor::home() {
@@ -92,4 +93,10 @@ void Motor::home() {
 
     // set the zero position
     m_position = 0;
+}
+
+void Motor::hold(bool h) {
+    m_hold = h;
+
+    digitalWrite(m_enablePin, m_hold ? LOW : HIGH);
 }
