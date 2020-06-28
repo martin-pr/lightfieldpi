@@ -14,6 +14,7 @@
 #include <QThreadPool>
 #include <QProgressDialog>
 #include <QCoreApplication>
+#include <QSpinBox>
 
 #include "config.h"
 #include <wiringPi.h>
@@ -59,7 +60,7 @@ namespace {
     };
 }
 
-MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M1_ENDSTOP, M1_DIR_INVERT), m_motor2(M2_ENABLE, M2_STEP, M2_DIR, M2_ENDSTOP, M2_DIR_INVERT), m_continuous(true) {
+MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M1_ENDSTOP, M1_DIR_INVERT), m_motor2(M2_ENABLE, M2_STEP, M2_DIR, M2_ENDSTOP, M2_DIR_INVERT), m_continuous(true), m_delay(200) {
     // setup camera
     connect(&m_camera, &Camera::imageReady, [this]() {
         if(m_continuous) {
@@ -132,6 +133,23 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
     }
     form->addWidget(steps);
 
+    form->addWidget(new QLabel("Delay before frame capture (ms):"));
+    QComboBox* delayComboBox = new QComboBox();
+    for(int d=0;d<10;++d) {
+        std::stringstream ss;
+        ss << (d*100);
+
+        delayComboBox->addItem(ss.str().c_str());
+
+        if(d*100 == m_delay)
+            delayComboBox->setCurrentIndex(delayComboBox->count()-1);
+    }
+
+    connect(delayComboBox, (void (QComboBox::*)(int))(&QComboBox::currentIndexChanged), [this](int i) {
+        m_delay = i*100;
+    });
+    form->addWidget(delayComboBox);
+
     QPushButton* go = new QPushButton("Go!");
     QPushButton::connect(go, &QPushButton::pressed, [this, steps]() {
         time_t rawtime = time(0);
@@ -169,7 +187,7 @@ MainWindow::MainWindow() : QMainWindow(), m_motor1(M1_ENABLE, M1_STEP, M1_DIR, M
             int imageProgressCounter = 0;
 
             while(current < end) {
-                delay(1000); // allow the camera to stabilise
+                delay(m_delay); // allow the camera to stabilise
 
                 auto img = m_camera.capture();
                 m_cameraView->showImage(img);
